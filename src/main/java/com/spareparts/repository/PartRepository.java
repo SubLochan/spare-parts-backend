@@ -13,24 +13,25 @@ import java.util.Optional;
 
 @Repository
 public interface PartRepository extends JpaRepository<Part, Long> {
+
     Optional<Part> findBySku(String sku);
-    
-    Page<Part> findAll(Pageable pageable);
-    
+
+    boolean existsBySku(String sku);
+
     Page<Part> findByNameContainingIgnoreCase(String name, Pageable pageable);
-    
+
     @Query("SELECT p FROM Part p WHERE p.quantity <= p.minStockLevel")
     List<Part> findLowStockParts();
-    
+
     @Query("SELECT p FROM Part p WHERE p.quantity <= p.minStockLevel")
     Page<Part> findLowStockParts(Pageable pageable);
-    
+
     Page<Part> findBySupplier_Id(Long supplierId, Pageable pageable);
-    
+
     Page<Part> findByStatus(String status, Pageable pageable);
-    
+
     Page<Part> findByCategory(String category, Pageable pageable);
-    
+
     @Query("SELECT p FROM Part p WHERE " +
            "LOWER(p.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
            "LOWER(p.sku) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +

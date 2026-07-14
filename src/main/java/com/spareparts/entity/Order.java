@@ -75,20 +75,12 @@ public class Order {
         }
     }
 
+    // Aligned with frontend ORDER_STATUS constants
     public enum OrderStatus {
-        PENDING("PENDING"),
-        APPROVED("APPROVED"),
-        COMPLETED("COMPLETED"),
-        CANCELLED("CANCELLED");
-
-        private final String value;
-
-        OrderStatus(String value) {
-            this.value = value;
-        }
-
-        public String getValue() {
-            return value;
-        }
+        PENDING,
+        PROCESSING,
+        SHIPPED,
+        DELIVERED,
+        CANCELLED;
     }
 }
