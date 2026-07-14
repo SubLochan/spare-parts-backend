@@ -2,103 +2,92 @@ package com.spareparts.service.impl;
 
 import com.spareparts.dto.PartDTO;
 import com.spareparts.entity.Part;
+import com.spareparts.entity.Supplier;
 import com.spareparts.exception.DuplicateResourceException;
 import com.spareparts.exception.ResourceNotFoundException;
 import com.spareparts.repository.PartRepository;
 import com.spareparts.repository.SupplierRepository;
-import com.spareparts.service.PartService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import java.math.BigDecimal;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @Slf4j
-public class PartServiceImpl implements PartService {
+@Transactional
+public class PartServiceImpl {
 
-    @Autowired
-    private PartRepository partRepository;
+    @Autowired private PartRepository partRepository;
+    @Autowired private SupplierRepository supplierRepository;
 
-    @Autowired
-    private SupplierRepository supplierRepository;
-
-    @Override
     public Page<PartDTO> getAllParts(Pageable pageable) {
-        return partRepository.findAll(pageable).map(this::convertToDTO);
+        return partRepository.findAll(pageable).map(this::toDTO);
     }
 
-    @Override
     public PartDTO getPartById(Long id) {
         Part part = partRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Part not found with id: " + id));
-        return convertToDTO(part);
+                .orElseThrow(() -> new ResourceNotFoundException("Part not found: " + id));
+        return toDTO(part);
     }
 
-    @Override
     public PartDTO createPart(PartDTO partDTO) {
-        if (partRepository.findBySku(partDTO.getSku()).isPresent()) {
-            throw new DuplicateResourceException("Part with SKU " + partDTO.getSku() + " already exists");
+        if (partRepository.existsBySku(partDTO.getSku())) {
+            throw new DuplicateResourceException("SKU already exists: " + partDTO.getSku());
         }
-
         Part part = new Part();
-        part.setSku(partDTO.getSku());
-        part.setName(partDTO.getName());
-        part.setDescription(partDTO.getDescription());
-        part.setQuantity(partDTO.getQuantity());
-        part.setMinStockLevel(partDTO.getMinStockLevel());
-        part.setUnitPrice(partDTO.getUnitPrice());
-        part.setReorderPoint(partDTO.getReorderPoint());
-        part.setCategory(partDTO.getCategory());
-        part.setStatus(partDTO.getStatus() != null ? partDTO.getStatus() : "ACTIVE");
-
-        if (partDTO.getSupplierId() != null) {
-            part.setSupplier(supplierRepository.findById(partDTO.getSupplierId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Supplier not found")));
-        }
-
+        mapDtoToEntity(partDTO, part);
         Part savedPart = partRepository.save(part);
-        log.info("Part created: {}", savedPart.getSku());
-        return convertToDTO(savedPart);
+        log.info("Created part with SKU: {}", savedPart.getSku());
+        return toDTO(savedPart);
     }
 
-    @Override
     public PartDTO updatePart(Long id, PartDTO partDTO) {
         Part part = partRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Part not found with id: " + id));
-
-        part.setName(partDTO.getName());
-        part.setDescription(partDTO.getDescription());
-        part.setQuantity(partDTO.getQuantity());
-        part.setMinStockLevel(partDTO.getMinStockLevel());
-        part.setUnitPrice(partDTO.getUnitPrice());
-        part.setStatus(partDTO.getStatus());
-
-        Part updatedPart = partRepository.save(part);
-        log.info("Part updated: {}", id);
-        return convertToDTO(updatedPart);
+                .orElseThrow(() -> new ResourceNotFoundException("Part not found: " + id));
+        mapDtoToEntity(partDTO, part);
+        Part savedPart = partRepository.save(part);
+        log.info("Updated part: {}", savedPart.getName());
+        return toDTO(savedPart);
     }
 
-    @Override
     public void deletePart(Long id) {
-        Part part = partRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Part not found with id: " + id));
-        partRepository.delete(part);
-        log.info("Part deleted: {}", id);
+        if (!partRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Part not found: " + id);
+        }
+        partRepository.deleteById(id);
+        log.info("Deleted part: {}", id);
     }
 
-    @Override
-    public Page<PartDTO> getLowStockParts(Pageable pageable) {
-        return partRepository.findLowStockParts(pageable).map(this::convertToDTO);
+    public List<Part> getLowStockParts() {
+        return partRepository.findLowStockParts();
     }
 
-    @Override
     public Page<PartDTO> searchParts(String keyword, Pageable pageable) {
-        return partRepository.searchParts(keyword, pageable).map(this::convertToDTO);
+        return partRepository.searchParts(keyword, pageable).map(this::toDTO);
     }
 
-    private PartDTO convertToDTO(Part part) {
+    private void mapDtoToEntity(PartDTO dto, Part part) {
+        part.setSku(dto.getSku());
+        part.setName(dto.getName());
+        part.setDescription(dto.getDescription());
+        part.setQuantity(dto.getQuantity());
+        part.setMinStockLevel(dto.getMinStockLevel());
+        part.setUnitPrice(dto.getUnitPrice());
+        part.setStatus(dto.getStatus() != null ? dto.getStatus() : "ACTIVE");
+        part.setCategory(dto.getCategory());
+        if (dto.getReorderPoint() != null) part.setReorderPoint(dto.getReorderPoint());
+        if (dto.getSupplierId() != null) {
+            Supplier supplier = supplierRepository.findById(dto.getSupplierId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Supplier not found: " + dto.getSupplierId()));
+            part.setSupplier(supplier);
+        }
+    }
+
+    public PartDTO toDTO(Part part) {
         PartDTO dto = new PartDTO();
         dto.setId(part.getId());
         dto.setSku(part.getSku());
