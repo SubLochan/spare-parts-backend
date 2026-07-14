@@ -103,7 +103,7 @@ public class OrderServiceImpl implements OrderService {
         dto.setQuantity(order.getQuantity());
         dto.setUnitPrice(order.getUnitPrice());
         dto.setTotalAmount(order.getTotalAmount());
-        dto.setStatus(order.getStatus().getValue());
+        dto.setStatus(order.getStatus().name());
         dto.setRemarks(order.getRemarks());
         dto.setDeliveryDate(order.getDeliveryDate());
         dto.setOrderDate(order.getOrderDate());
