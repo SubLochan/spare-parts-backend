@@ -13,20 +13,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 @Service
 @Slf4j
 public class OrderServiceImpl implements OrderService {
 
-    @Autowired
-    private OrderRepository orderRepository;
-
-    @Autowired
-    private PartRepository partRepository;
-
-    @Autowired
-    private SupplierRepository supplierRepository;
+    @Autowired private OrderRepository orderRepository;
+    @Autowired private PartRepository partRepository;
+    @Autowired private SupplierRepository supplierRepository;
 
     @Override
     public Page<OrderDTO> getAllOrders(Pageable pageable) {
@@ -52,6 +51,7 @@ public class OrderServiceImpl implements OrderService {
         order.setUnitPrice(orderDTO.getUnitPrice());
         order.setStatus(OrderStatus.PENDING);
         order.setRemarks(orderDTO.getRemarks());
+        order.setDeliveryDate(parseDate(orderDTO.getDeliveryDate()));
 
         Order savedOrder = orderRepository.save(order);
         log.info("Order created: {}", savedOrder.getOrderNumber());
@@ -62,11 +62,10 @@ public class OrderServiceImpl implements OrderService {
     public OrderDTO updateOrder(Long id, OrderDTO orderDTO) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id));
-
         order.setQuantity(orderDTO.getQuantity());
         order.setUnitPrice(orderDTO.getUnitPrice());
         order.setRemarks(orderDTO.getRemarks());
-
+        order.setDeliveryDate(parseDate(orderDTO.getDeliveryDate()));
         Order updatedOrder = orderRepository.save(order);
         log.info("Order updated: {}", id);
         return convertToDTO(updatedOrder);
@@ -84,12 +83,25 @@ public class OrderServiceImpl implements OrderService {
     public OrderDTO updateOrderStatus(Long id, String status) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id));
-
         order.setStatus(OrderStatus.valueOf(status.toUpperCase()));
-
         Order updatedOrder = orderRepository.save(order);
         log.info("Order status updated: {} -> {}", id, status);
         return convertToDTO(updatedOrder);
+    }
+
+    // Parses both "2026-07-15" and "2026-07-15T10:30:00"
+    private LocalDateTime parseDate(String dateStr) {
+        if (dateStr == null || dateStr.isBlank()) return null;
+        try {
+            if (dateStr.contains("T")) {
+                return LocalDateTime.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            } else {
+                return LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
+            }
+        } catch (Exception e) {
+            log.warn("Could not parse date: {}", dateStr);
+            return null;
+        }
     }
 
     private OrderDTO convertToDTO(Order order) {
@@ -105,7 +117,8 @@ public class OrderServiceImpl implements OrderService {
         dto.setTotalAmount(order.getTotalAmount());
         dto.setStatus(order.getStatus().name());
         dto.setRemarks(order.getRemarks());
-        dto.setDeliveryDate(order.getDeliveryDate());
+        dto.setDeliveryDate(order.getDeliveryDate() != null
+                ? order.getDeliveryDate().toLocalDate().toString() : null);
         dto.setOrderDate(order.getOrderDate());
         dto.setCreatedAt(order.getCreatedAt());
         dto.setUpdatedAt(order.getUpdatedAt());

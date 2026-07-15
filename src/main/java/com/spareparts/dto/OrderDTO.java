@@ -1,5 +1,10 @@
 package com.spareparts.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -14,7 +19,6 @@ import java.time.LocalDateTime;
 public class OrderDTO {
 
     private Long id;
-
     private String orderNumber;
 
     @NotNull(message = "Part ID is required")
@@ -36,16 +40,18 @@ public class OrderDTO {
     private BigDecimal unitPrice;
 
     private BigDecimal totalAmount;
-
     private String status;
-
     private String remarks;
 
-    private LocalDateTime deliveryDate;
+    // Accept both "2026-07-15" and "2026-07-15T00:00:00"
+    private String deliveryDate;
 
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime orderDate;
 
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
 
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime updatedAt;
 }
