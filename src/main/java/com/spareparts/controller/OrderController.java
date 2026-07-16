@@ -14,6 +14,7 @@ import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -48,7 +49,6 @@ public class OrderController {
         } else {
             orders = orderRepository.findAll(pageable);
         }
-
         return orders.map(this::toDTO);
     }
 
@@ -113,8 +113,17 @@ public class OrderController {
         if (dto.getStatus() != null) {
             order.setStatus(Order.OrderStatus.valueOf(dto.getStatus().toUpperCase()));
         }
-        if (dto.getDeliveryDate() != null) {
-            order.setDeliveryDate(dto.getDeliveryDate());
+        // deliveryDate is now String in DTO — parse to LocalDateTime
+        if (dto.getDeliveryDate() != null && !dto.getDeliveryDate().isBlank()) {
+            try {
+                if (dto.getDeliveryDate().contains("T")) {
+                    order.setDeliveryDate(LocalDateTime.parse(dto.getDeliveryDate()));
+                } else {
+                    order.setDeliveryDate(LocalDate.parse(dto.getDeliveryDate()).atStartOfDay());
+                }
+            } catch (Exception e) {
+                // skip invalid date
+            }
         }
     }
 
@@ -131,7 +140,9 @@ public class OrderController {
         dto.setTotalAmount(order.getTotalAmount());
         dto.setStatus(order.getStatus() != null ? order.getStatus().name() : null);
         dto.setRemarks(order.getRemarks());
-        dto.setDeliveryDate(order.getDeliveryDate());
+        // deliveryDate is String in DTO — convert from LocalDateTime
+        dto.setDeliveryDate(order.getDeliveryDate() != null
+                ? order.getDeliveryDate().toLocalDate().toString() : null);
         dto.setOrderDate(order.getOrderDate());
         dto.setCreatedAt(order.getCreatedAt());
         dto.setUpdatedAt(order.getUpdatedAt());
